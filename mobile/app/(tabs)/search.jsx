@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView } from "react-native";
 import { MealAPI } from "../../services/mealAPI";
 import { useDebounce } from "../../hooks/useDebounce";
 import { searchStyles } from "../../assets/styles/search.styles";
@@ -8,15 +8,29 @@ import { Ionicons } from "@expo/vector-icons";
 import RecipeCard from "../../components/RecipeCard";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
+const AFRICAN_COUNTRIES = [
+  { name: "All", code: "" },
+  { name: "Cameroon", code: "Cameroonian" },
+  { name: "Nigeria", code: "Nigerian" },
+  { name: "Ghana", code: "Ghanaian" },
+  { name: "Kenya", code: "Kenyan" },
+  { name: "Ethiopia", code: "Ethiopian" },
+  { name: "Egypt", code: "Egyptian" },
+  { name: "Morocco", code: "Moroccan" },
+  { name: "South Africa", code: "South African" },
+];
+
 const SearchScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [showAfricanFilter, setShowAfricanFilter] = useState(false);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const performSearch = async (query) => {
+  const performSearch = async (query, country = selectedCountry) => {
     // if no search query
     if (!query.trim()) {
       const randomMeals = await MealAPI.getRandomMeals(12);
@@ -33,6 +47,19 @@ const SearchScreen = () => {
     if (results.length === 0) {
       const ingredientResults = await MealAPI.filterByIngredient(query);
       results = ingredientResults;
+    }
+
+    // If African country filter is selected
+    if (selectedCountry) {
+      const countryResults = await MealAPI.searchByAfricanCountry(selectedCountry);
+      results = [...results, ...countryResults];
+      // Deduplicate by ID
+      const seen = new Set();
+      results = results.filter(meal => {
+        if (seen.has(meal.idMeal)) return false;
+        seen.add(meal.idMeal);
+        return true;
+      });
     }
 
     return results
@@ -56,6 +83,19 @@ const SearchScreen = () => {
     loadInitialData();
   }, []);
 
+  const loadRecipes = async (query = searchQuery, country = selectedCountry) => {
+    setLoading(true);
+    try {
+      const results = await performSearch(query, country);
+      setRecipes(results);
+    } catch (error) {
+      console.error("Error searching:", error);
+      setRecipes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (initialLoading) return;
 
@@ -63,7 +103,7 @@ const SearchScreen = () => {
       setLoading(true);
 
       try {
-        const results = await performSearch(debouncedSearchQuery);
+        const results = await performSearch(debouncedSearchQuery, selectedCountry);
         setRecipes(results);
       } catch (error) {
         console.error("Error searching:", error);
@@ -74,7 +114,7 @@ const SearchScreen = () => {
     };
 
     handleSearch();
-  }, [debouncedSearchQuery, initialLoading]);
+  }, [debouncedSearchQuery, selectedCountry, initialLoading]);
 
   if (initialLoading) return <LoadingSpinner message="Loading recipes..." />;
 
@@ -90,19 +130,49 @@ const SearchScreen = () => {
           />
           <TextInput
             style={searchStyles.searchInput}
-            placeholder="Search recipes, ingredients..."
+            placeholder="Search recipes, ingredients, African dishes..."
             placeholderTextColor={COLORS.textLight}
             value={searchQuery}
             onChangeText={setSearchQuery}
             returnKeyType="search"
           />
-          {searchQuery.length > 0 && (
+          {searchQuery.length > 0 ? (
             <TouchableOpacity onPress={() => setSearchQuery("")} style={searchStyles.clearButton}>
               <Ionicons name="close-circle" size={20} color={COLORS.textLight} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => setShowAfricanFilter(!showAfricanFilter)} style={searchStyles.clearButton}>
+              <Ionicons name={showAfricanFilter ? "globe" : "globe-outline"} size={20} color={showAfricanFilter ? COLORS.primary : COLORS.textLight} />
             </TouchableOpacity>
           )}
         </View>
       </View>
+
+      {/* African Country Filter */}
+      {showAfricanFilter && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={searchStyles.filterContainer}>
+          {AFRICAN_COUNTRIES.map((country) => (
+            <TouchableOpacity
+              key={country.name}
+              style={[
+                searchStyles.filterChip,
+                selectedCountry === country.code && searchStyles.filterChipActive
+              ]}
+              onPress={() => {
+                setSelectedCountry(country.code);
+                loadRecipes(searchQuery, country.code);
+              }}
+            >
+              <Text style={[
+                searchStyles.filterChipText,
+                selectedCountry === country.code && searchStyles.filterChipTextActive
+              ]}>
+                {country.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       <View style={searchStyles.resultsSection}>
         <View style={searchStyles.resultsHeader}>

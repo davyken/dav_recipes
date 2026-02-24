@@ -38,6 +38,13 @@ const TabsLayout = () => {
         }}
       />
       <Tabs.Screen
+        name="restaurants"
+        options={{
+          title: "Restaurants",
+          tabBarIcon: ({ color, size }) => <Ionicons name="storefront" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="search"
         options={{
           title: "Search",
@@ -49,6 +56,13 @@ const TabsLayout = () => {
         options={{
           title: "Favorites",
           tabBarIcon: ({ color, size }) => <Ionicons name="heart" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
         }}
       />
     </Tabs>

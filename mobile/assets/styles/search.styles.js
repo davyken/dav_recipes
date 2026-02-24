@@ -126,4 +126,29 @@ export const searchStyles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
+  filterContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  filterChip: {
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.text,
+  },
+  filterChipTextActive: {
+    color: COLORS.white,
+  },
 });

@@ -123,4 +123,76 @@ export const MealAPI = {
       originalData: meal,
     };
   },
+
+  // Get meals by African country (Cameroon, Nigeria, Ghana, etc.)
+  searchByAfricanCountry: async (country) => {
+    try {
+      const response = await fetch(`${BASE_URL}/filter.php?a=${encodeURIComponent(country)}`);
+      const data = await response.json();
+      return data.meals || [];
+    } catch (error) {
+      console.error(`Error searching meals for ${country}:`, error);
+      return [];
+    }
+  },
+
+  // Get all available African countries
+  getAfricanCountries: async () => {
+    return [
+      { name: "Cameroon", code: "Cameroonian" },
+      { name: "Nigeria", code: "Nigerian" },
+      { name: "Ghana", code: "Ghanaian" },
+      { name: "Kenya", code: "Kenyan" },
+      { name: "Ethiopia", code: "Ethiopian" },
+      { name: "Egypt", code: "Egyptian" },
+      { name: "Morocco", code: "Moroccan" },
+      { name: "Tunisia", code: "Tunisian" },
+      { name: "South Africa", code: "South African" },
+      { name: "Ivory Coast", code: "Ivory Coast" },
+      { name: "Senegal", code: "Senegalese" },
+      { name: "DRC", code: "Congolese" },
+    ];
+  },
+
+  // Search Cameroon recipes specifically
+  searchCameroonRecipes: async () => {
+    try {
+      // TheMealDB uses "Canadian" but for Cameroon we need to use area search
+      const countries = ["African", "Cameroonian", "Nigerian", "Ghanaian"];
+      const promises = countries.map(country => 
+        fetch(`${BASE_URL}/filter.php?a=${country}`).then(res => res.json())
+      );
+      const results = await Promise.all(promises);
+      
+      // Combine and deduplicate results
+      const allMeals = [];
+      const seen = new Set();
+      results.forEach(data => {
+        if (data.meals) {
+          data.meals.forEach(meal => {
+            if (!seen.has(meal.idMeal)) {
+              seen.add(meal.idMeal);
+              allMeals.push(meal);
+            }
+          });
+        }
+      });
+      return allMeals;
+    } catch (error) {
+      console.error("Error searching Cameroon recipes:", error);
+      return [];
+    }
+  },
+
+  // Get full meal details by ID (used with filtered results)
+  getMealDetails: async (id) => {
+    try {
+      const response = await fetch(`${BASE_URL}/lookup.php?i=${id}`);
+      const data = await response.json();
+      return data.meals ? data.meals[0] : null;
+    } catch (error) {
+      console.error("Error getting meal details:", error);
+      return null;
+    }
+  },
 };

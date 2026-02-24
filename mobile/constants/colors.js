@@ -97,5 +97,8 @@ export const THEMES = {
   roseGold: roseGoldTheme,
 };
 
-// 👇 change this to switch theme
-export const COLORS = THEMES.purple;
+export const COLORS = {
+  ...THEMES.purple,
+  danger: "#E53935",
+  secondary: "#9C27B0",
+};
