@@ -1,8 +1,9 @@
 import express from "express";
+import cors from "cors";
 import { ENV } from "./config/env.js";
 import { db } from "./config/db.js";
-import { favoritesTable, restaurantsTable, menuItemsTable, ordersTable, orderItemsTable } from "./db/schema.js";
-import { and, eq, asc } from "drizzle-orm";
+import { favoritesTable, restaurantsTable, menuItemsTable, ordersTable, orderItemsTable, userRecipesTable, addressesTable } from "./db/schema.js";
+import { and, eq, asc, like, or } from "drizzle-orm";
 import job from "./config/cron.js";
 
 const app = express();
@@ -10,10 +11,412 @@ const PORT = ENV.PORT || 5001;
 
 if (ENV.NODE_ENV === "production") job.start();
 
+app.use(cors());
 app.use(express.json());
+
+// Google Places API base URL
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true });
+});
+
+// ============ GOOGLE PLACES API ============
+
+// Search restaurants using Google Places API
+app.get("/api/google/restaurants", async (req, res) => {
+  try {
+    const { lat, lng, radius = 5000, keyword } = req.query;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({ error: "Latitude and longitude are required" });
+    }
+
+    if (!GOOGLE_PLACES_API_KEY) {
+      return res.status(500).json({ error: "Google Places API key not configured" });
+    }
+
+    // Search for restaurants nearby
+    const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=restaurant&keyword=${encodeURIComponent(keyword || '')}&key=${GOOGLE_PLACES_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK") {
+      const restaurants = data.results.map(place => ({
+        id: place.place_id,
+        name: place.name,
+        address: place.vicinity,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        rating: place.rating || 0,
+        userRatingsTotal: place.user_ratings_total || 0,
+        priceLevel: place.price_level ? "$".repeat(place.price_level) : "$",
+        image: place.photos ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}` : null,
+        openNow: place.opening_hours?.open_now,
+        placeId: place.place_id,
+      }));
+      res.status(200).json(restaurants);
+    } else if (data.status === "ZERO_RESULTS") {
+      res.status(200).json([]);
+    } else {
+      res.status(500).json({ error: "Google Places API error", details: data });
+    }
+  } catch (error) {
+    console.log("Error fetching Google restaurants", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Get restaurant details including phone number and menu
+app.get("/api/google/restaurant/:placeId", async (req, res) => {
+  try {
+    const { placeId } = req.params;
+    
+    if (!GOOGLE_PLACES_API_KEY) {
+      return res.status(500).json({ error: "Google Places API key not configured" });
+    }
+
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,geometry,rating,user_ratings_total,formatted_phone_number,opening_hours,website,reviews,photos&key=${GOOGLE_PLACES_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK") {
+      const place = data.result;
+      
+      // Calculate distance from reference point (would need user location in request)
+      // For now return the data we have
+      
+      res.status(200).json({
+        name: place.name,
+        address: place.formatted_address,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        rating: place.rating || 0,
+        userRatingsTotal: place.user_ratings_total || 0,
+        phone: place.formatted_phone_number || null,
+        website: place.website || null,
+        openingHours: place.opening_hours?.weekday_text || [],
+        openNow: place.opening_hours?.open_now,
+        image: place.photos ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}` : null,
+        // Note: Google Places API doesn't provide menu data
+        // Menu would need to be scraped separately or entered manually
+        hasMenu: false,
+        menu: [],
+      });
+    } else {
+      res.status(500).json({ error: "Place not found" });
+    }
+  } catch (error) {
+    console.log("Error fetching restaurant details", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Search restaurants with text query
+app.get("/api/google/search", async (req, res) => {
+  try {
+    const { query, lat, lng } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+
+    if (!GOOGLE_PLACES_API_KEY) {
+      return res.status(500).json({ error: "Google Places API key not configured" });
+    }
+
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=restaurant&key=${GOOGLE_PLACES_API_KEY}`;
+    
+    if (lat && lng) {
+      url += `&location=${lat},${lng}`;
+    }
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "OK") {
+      const restaurants = data.results.map(place => ({
+        id: place.place_id,
+        name: place.name,
+        address: place.formatted_address || place.vicinity,
+        latitude: place.geometry.location.lat,
+        longitude: place.geometry.location.lng,
+        rating: place.rating || 0,
+        userRatingsTotal: place.user_ratings_total || 0,
+        priceLevel: place.price_level ? "$".repeat(place.price_level) : "$",
+        image: place.photos ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${place.photos[0].photo_reference}&key=${GOOGLE_PLACES_API_KEY}` : null,
+        openNow: place.opening_hours?.open_now,
+        placeId: place.place_id,
+      }));
+      res.status(200).json(restaurants);
+    } else if (data.status === "ZERO_RESULTS") {
+      res.status(200).json([]);
+    } else {
+      res.status(500).json({ error: "Google Places API error", details: data });
+    }
+  } catch (error) {
+    console.log("Error searching restaurants", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// ============ USER RECIPES API ============
+
+// Create a new recipe
+app.post("/api/recipes", async (req, res) => {
+  try {
+    const { userId, title, description, image, cookTime, servings, category, area, ingredients, instructions, isPublic } = req.body;
+
+    if (!userId || !title || !ingredients || !instructions) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const newRecipe = await db
+      .insert(userRecipesTable)
+      .values({
+        userId,
+        title,
+        description,
+        image,
+        cookTime,
+        servings,
+        category,
+        area,
+        ingredients: JSON.stringify(ingredients),
+        instructions: JSON.stringify(instructions),
+        isPublic: isPublic !== false,
+      })
+      .returning();
+
+    res.status(201).json({
+      ...newRecipe[0],
+      ingredients: JSON.parse(newRecipe[0].ingredients),
+      instructions: JSON.parse(newRecipe[0].instructions),
+    });
+  } catch (error) {
+    console.log("Error creating recipe", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Get all recipes for a user
+app.get("/api/recipes/user/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const recipes = await db
+      .select()
+      .from(userRecipesTable)
+      .where(eq(userRecipesTable.userId, userId))
+      .orderBy(asc(userRecipesTable.createdAt));
+
+    const formattedRecipes = recipes.map(recipe => ({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      instructions: JSON.parse(recipe.instructions),
+    }));
+
+    res.status(200).json(formattedRecipes);
+  } catch (error) {
+    console.log("Error fetching user recipes", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Get public recipes
+app.get("/api/recipes/public", async (req, res) => {
+  try {
+    const { category, area, search } = req.query;
+
+    let query = db.select().from(userRecipesTable).where(eq(userRecipesTable.isPublic, true));
+    
+    const recipes = await query.orderBy(asc(userRecipesTable.createdAt));
+
+    let filteredRecipes = recipes.map(recipe => ({
+      ...recipe,
+      ingredients: JSON.parse(recipe.ingredients),
+      instructions: JSON.parse(recipe.instructions),
+    }));
+
+    // Filter by category if provided
+    if (category) {
+      filteredRecipes = filteredRecipes.filter(r => r.category === category);
+    }
+
+    // Filter by area/cuisine if provided
+    if (area) {
+      filteredRecipes = filteredRecipes.filter(r => r.area === area);
+    }
+
+    // Search by title
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredRecipes = filteredRecipes.filter(r => 
+        r.title.toLowerCase().includes(searchLower) ||
+        r.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    res.status(200).json(filteredRecipes);
+  } catch (error) {
+    console.log("Error fetching public recipes", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Get single recipe by ID
+app.get("/api/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const recipe = await db
+      .select()
+      .from(userRecipesTable)
+      .where(eq(userRecipesTable.id, parseInt(id)));
+
+    if (recipe.length === 0) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    res.status(200).json({
+      ...recipe[0],
+      ingredients: JSON.parse(recipe[0].ingredients),
+      instructions: JSON.parse(recipe[0].instructions),
+    });
+  } catch (error) {
+    console.log("Error fetching recipe", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Update a recipe
+app.put("/api/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, image, cookTime, servings, category, area, ingredients, instructions, isPublic } = req.body;
+
+    const updateData = {};
+    if (title) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (image !== undefined) updateData.image = image;
+    if (cookTime !== undefined) updateData.cookTime = cookTime;
+    if (servings !== undefined) updateData.servings = servings;
+    if (category !== undefined) updateData.category = category;
+    if (area !== undefined) updateData.area = area;
+    if (ingredients) updateData.ingredients = JSON.stringify(ingredients);
+    if (instructions) updateData.instructions = JSON.stringify(instructions);
+    if (isPublic !== undefined) updateData.isPublic = isPublic;
+    updateData.updatedAt = new Date();
+
+    const updated = await db
+      .update(userRecipesTable)
+      .set(updateData)
+      .where(eq(userRecipesTable.id, parseInt(id)))
+      .returning();
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    res.status(200).json({
+      ...updated[0],
+      ingredients: JSON.parse(updated[0].ingredients),
+      instructions: JSON.parse(updated[0].instructions),
+    });
+  } catch (error) {
+    console.log("Error updating recipe", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Delete a recipe
+app.delete("/api/recipes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await db
+      .delete(userRecipesTable)
+      .where(eq(userRecipesTable.id, parseInt(id)));
+
+    res.status(200).json({ message: "Recipe deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting recipe", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// ============ USER ADDRESSES API ============
+
+// Add delivery address
+app.post("/api/addresses", async (req, res) => {
+  try {
+    const { userId, label, address, latitude, longitude, isDefault } = req.body;
+
+    if (!userId || !address) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // If this is set as default, unset other defaults
+    if (isDefault) {
+      await db
+        .update(addressesTable)
+        .set({ isDefault: false })
+        .where(eq(addressesTable.userId, userId));
+    }
+
+    const newAddress = await db
+      .insert(addressesTable)
+      .values({
+        userId,
+        label,
+        address,
+        latitude,
+        longitude,
+        isDefault: isDefault || false,
+      })
+      .returning();
+
+    res.status(201).json(newAddress[0]);
+  } catch (error) {
+    console.log("Error adding address", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Get user's addresses
+app.get("/api/addresses/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const addresses = await db
+      .select()
+      .from(addressesTable)
+      .where(eq(addressesTable.userId, userId))
+      .orderBy(asc(addressesTable.isDefault));
+
+    res.status(200).json(addresses);
+  } catch (error) {
+    console.log("Error fetching addresses", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Delete an address
+app.delete("/api/addresses/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await db
+      .delete(addressesTable)
+      .where(eq(addressesTable.id, parseInt(id)));
+
+    res.status(200).json({ message: "Address deleted successfully" });
+  } catch (error) {
+    console.log("Error deleting address", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
 });
 
 app.post("/api/favorites", async (req, res) => {

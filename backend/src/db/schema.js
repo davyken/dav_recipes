@@ -61,3 +61,33 @@ export const orderItemsTable = pgTable("order_items", {
   price: doublePrecision("price").notNull(), // price at time of order
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// User created recipes
+export const userRecipesTable = pgTable("user_recipes", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  image: text("image"),
+  cookTime: text("cook_time"),
+  servings: integer("servings"),
+  category: text("category"),
+  area: text("area"), // cuisine type (e.g., "Cameroonian")
+  ingredients: text("ingredients").notNull(), // JSON array as text
+  instructions: text("instructions").notNull(), // JSON array as text
+  isPublic: boolean("is_public").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User delivery addresses
+export const addressesTable = pgTable("addresses", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  label: text("label"), // e.g., "Home", "Office"
+  address: text("address").notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});

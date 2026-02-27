@@ -17,7 +17,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.davyken.mobile"
     },
     "web": {
       "bundler": "metro",
@@ -40,7 +41,12 @@
       "typedRoutes": true
     },
     "extra": {
-      "CLERK_PUBLISHABLE_KEY": "pk_test_bW9kZXN0LXNoYWQtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA"
+      "CLERK_PUBLISHABLE_KEY": "pk_test_bW9kZXN0LXNoYWQtMzAuY2xlcmsuYWNjb3VudHMuZGV2JA",
+      "BACKEND_URL": "http://localhost:5001",
+      "router": {},
+      "eas": {
+        "projectId": "7b67cced-f440-48b5-b1d6-1007ac2ebdd9"
+      }
     }
   }
 }
