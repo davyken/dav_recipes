@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from "react-native";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { COLORS } from "../../constants/colors";
 import { RecipeAPI, AddressAPI, OrderAPI } from "../../services/api";
+import { uploadImageToCloudinary } from "../../services/cloudinary";
 
 const ProfileScreen = () => {
-  const { user } = useUser();
+  const { user, isLoaded, setUser } = useUser();
   const { signOut } = useAuth();
   const router = useRouter();
   
@@ -15,6 +17,7 @@ const ProfileScreen = () => {
   const [addresses, setAddresses] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchUserData = async () => {
     try {
@@ -35,8 +38,98 @@ const ProfileScreen = () => {
   };
 
   useEffect(() => {
-    fetchUserData();
-  }, [user?.id]);
+    if (isLoaded) {
+      fetchUserData();
+    }
+  }, [user?.id, isLoaded]);
+
+  // Pick image from gallery
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please grant camera roll permission.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  // Take photo with camera
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please grant camera permission.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo.");
+    }
+  };
+
+  // Upload and set profile image
+  const uploadProfileImage = async (imageUri) => {
+    setUploadingImage(true);
+    try {
+      // Upload to Cloudinary
+      const uploadResult = await uploadImageToCloudinary(imageUri);
+      
+      if (uploadResult.success) {
+        // Update Clerk user profile image
+        await setUser({
+          imageUrl: uploadResult.url,
+        });
+        Alert.alert("Success", "Profile image updated!");
+      } else {
+        Alert.alert("Error", "Failed to upload image. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      Alert.alert("Error", "Failed to update profile image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Show image picker options
+  const showImageOptions = () => {
+    Alert.alert(
+      "Change Profile Photo",
+      "Choose an option",
+      [
+        { text: "Take Photo", onPress: takePhoto },
+        { text: "Choose from Gallery", onPress: pickImage },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
 
   const handleSignOut = async () => {
     try {
@@ -52,16 +145,34 @@ const ProfileScreen = () => {
       <ScrollView contentContainerStyle={profileStyles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={profileStyles.header}>
-          <View style={profileStyles.avatarContainer}>
-            {user?.imageUrl ? (
-              <Image source={{ uri: user.imageUrl }} style={profileStyles.avatar} />
-            ) : (
+          <TouchableOpacity 
+            style={profileStyles.avatarContainer} 
+            onPress={showImageOptions}
+            disabled={uploadingImage}
+          >
+            {uploadingImage ? (
               <View style={profileStyles.avatarPlaceholder}>
-                <Ionicons name="person" size={40} color={COLORS.white} />
+                <ActivityIndicator size="small" color={COLORS.white} />
               </View>
+            ) : user?.imageUrl ? (
+              <>
+                <Image source={{ uri: user.imageUrl }} style={profileStyles.avatar} />
+                <View style={profileStyles.editBadge}>
+                  <Ionicons name="camera" size={14} color={COLORS.white} />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={profileStyles.avatarPlaceholder}>
+                  <Ionicons name="person" size={40} color={COLORS.white} />
+                </View>
+                <View style={profileStyles.editBadge}>
+                  <Ionicons name="camera" size={14} color={COLORS.white} />
+                </View>
+              </>
             )}
-          </View>
-          <Text style={profileStyles.name}>{user?.fullName || "User"}</Text>
+          </TouchableOpacity>
+          <Text style={profileStyles.name}>{user?.username || user?.fullName || "User"}</Text>
           <Text style={profileStyles.email}>{user?.primaryEmailAddress?.emailAddress}</Text>
           
           {/* Stats */}
@@ -226,6 +337,19 @@ const profileStyles = {
     backgroundColor: COLORS.textLight,
     justifyContent: "center",
     alignItems: "center",
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: COLORS.white,
   },
   name: {
     fontSize: 24,

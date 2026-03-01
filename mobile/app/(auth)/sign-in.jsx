@@ -17,6 +17,7 @@ import { Image } from "expo-image";
 
 import { authStyles } from "../../assets/styles/auth.styles";
 import { COLORS } from "../../constants/colors";
+import VerifySecondFactor from "./verify-second-factor";
 
 const SignInScreen = () => {
   const router = useRouter();
@@ -27,6 +28,8 @@ const SignInScreen = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [needsSecondFactor, setNeedsSecondFactor] = useState(false);
+  const [signInAttemptData, setSignInAttemptData] = useState(null);
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -46,17 +49,40 @@ const SignInScreen = () => {
 
       if (signInAttempt.status === "complete") {
         await setActive({ session: signInAttempt.createdSessionId });
+      } else if (signInAttempt.status === "needs_second_factor") {
+        // Store the sign-in attempt data and prompt for second factor
+        setSignInAttemptData(signInAttempt);
+        setNeedsSecondFactor(true);
       } else {
         Alert.alert("Error", "Sign in failed. Please try again.");
         console.error(JSON.stringify(signInAttempt, null, 2));
       }
     } catch (err) {
-      Alert.alert("Error", err.errors?.[0]?.message || "Sign in failed");
+      // Check if email already exists (should sign in instead)
+      if (err.errors?.[0]?.code === "form_identifier_exists") {
+        Alert.alert("Account Exists", "This email is already registered. Please sign in instead.", [
+          { text: "OK", onPress: () => router.push("/(auth)/sign-in") }
+        ]);
+      } else {
+        Alert.alert("Error", err.errors?.[0]?.message || "Sign in failed");
+      }
       console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);
     }
   };
+
+  if (needsSecondFactor && signInAttemptData) {
+    return (
+      <VerifySecondFactor
+        signInAttempt={signInAttemptData}
+        onBack={() => {
+          setNeedsSecondFactor(false);
+          setSignInAttemptData(null);
+        }}
+      />
+    );
+  }
 
   return (
     <View style={authStyles.container}>

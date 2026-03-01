@@ -295,7 +295,22 @@ app.get("/api/recipes/:id", async (req, res) => {
 app.put("/api/recipes/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, image, cookTime, servings, category, area, ingredients, instructions, isPublic } = req.body;
+    const { userId, title, description, image, cookTime, servings, category, area, ingredients, instructions, isPublic } = req.body;
+
+    // First check if recipe exists and belongs to the user
+    const existingRecipe = await db
+      .select()
+      .from(userRecipesTable)
+      .where(eq(userRecipesTable.id, parseInt(id)));
+
+    if (existingRecipe.length === 0) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    // Verify ownership
+    if (existingRecipe[0].userId !== userId) {
+      return res.status(403).json({ error: "You can only update your own recipes" });
+    }
 
     const updateData = {};
     if (title) updateData.title = title;
@@ -316,10 +331,6 @@ app.put("/api/recipes/:id", async (req, res) => {
       .where(eq(userRecipesTable.id, parseInt(id)))
       .returning();
 
-    if (updated.length === 0) {
-      return res.status(404).json({ error: "Recipe not found" });
-    }
-
     res.status(200).json({
       ...updated[0],
       ingredients: JSON.parse(updated[0].ingredients),
@@ -335,6 +346,22 @@ app.put("/api/recipes/:id", async (req, res) => {
 app.delete("/api/recipes/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const { userId } = req.body; // Require userId for ownership check
+
+    // First check if recipe exists and belongs to the user
+    const existingRecipe = await db
+      .select()
+      .from(userRecipesTable)
+      .where(eq(userRecipesTable.id, parseInt(id)));
+
+    if (existingRecipe.length === 0) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    // Verify ownership
+    if (existingRecipe[0].userId !== userId) {
+      return res.status(403).json({ error: "You can only delete your own recipes" });
+    }
 
     await db
       .delete(userRecipesTable)

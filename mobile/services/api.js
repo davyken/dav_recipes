@@ -52,17 +52,18 @@ export const RecipeAPI = {
   },
 
   // Update a recipe
-  updateRecipe: async (id, recipeData) => {
+  updateRecipe: async (id, recipeData, userId) => {
     return fetchAPI(`/recipes/${id}`, {
       method: "PUT",
-      body: JSON.stringify(recipeData),
+      body: JSON.stringify({ ...recipeData, userId }),
     });
   },
 
   // Delete a recipe
-  deleteRecipe: async (id) => {
+  deleteRecipe: async (id, userId) => {
     return fetchAPI(`/recipes/${id}`, {
       method: "DELETE",
+      body: JSON.stringify({ userId }),
     });
   },
 };

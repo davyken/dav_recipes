@@ -52,17 +52,17 @@ const TabsLayout = () => {
         }}
       />
       <Tabs.Screen
+        name="my-recipes"
+        options={{
+          title: "My Recipes",
+          tabBarIcon: ({ color, size }) => <Ionicons name="book" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="favorites"
         options={{
           title: "Favorites",
           tabBarIcon: ({ color, size }) => <Ionicons name="heart" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="add-recipe"
-        options={{
-          title: "Add",
-          tabBarIcon: ({ color, size }) => <Ionicons name="add-circle" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

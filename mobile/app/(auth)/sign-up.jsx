@@ -43,7 +43,19 @@ const SignUpScreen = () => {
 
       setPendingVerification(true);
     } catch (err) {
-      Alert.alert("Error", err.errors?.[0]?.message || "Failed to create account");
+      // Check if email already exists - suggest signing in instead
+      if (err.errors?.[0]?.code === "form_identifier_exists") {
+        Alert.alert(
+          "Account Exists",
+          "This email is already registered. Would you like to sign in instead?",
+          [
+            { text: "Sign In", onPress: () => router.push("/(auth)/sign-in") },
+            { text: "Cancel", style: "cancel" }
+          ]
+        );
+      } else {
+        Alert.alert("Error", err.errors?.[0]?.message || "Failed to create account");
+      }
       console.error(JSON.stringify(err, null, 2));
     } finally {
       setLoading(false);

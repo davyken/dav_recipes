@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Image } from "react-native";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useState, useEffect } from "react";
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, Image, ActivityIndicator } from "react-native";
+import { useAuth } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { RecipeAPI } from "../../services/api";
-import { COLORS } from "../../constants/colors";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { RecipeAPI } from "../../../services/api";
+import { uploadImageToCloudinary } from "../../../services/cloudinary";
+import { COLORS } from "../../../constants/colors";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Dessert", "Snack", "Drinks", "Salad", "Soup", "Side Dish"
@@ -15,14 +17,16 @@ const CUISINES = [
   "Moroccan", "Tunisian", "South African", "French", "Italian", "American", "Other"
 ];
 
-const AddRecipeScreen = () => {
+const EditRecipeScreen = () => {
+  const { id } = useLocalSearchParams();
   const { userId } = useAuth();
-  const { user } = useUser();
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+  const [localImageUri, setLocalImageUri] = useState("");
+  const [originalImage, setOriginalImage] = useState("");
   const [cookTime, setCookTime] = useState("");
   const [servings, setServings] = useState("");
   const [category, setCategory] = useState("");
@@ -30,7 +34,93 @@ const AddRecipeScreen = () => {
   const [ingredients, setIngredients] = useState("");
   const [instructions, setInstructions] = useState("");
   const [isPublic, setIsPublic] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  useEffect(() => {
+    fetchRecipe();
+  }, [id]);
+
+  const fetchRecipe = async () => {
+    try {
+      const recipe = await RecipeAPI.getRecipe(id);
+      if (recipe) {
+        setTitle(recipe.title || "");
+        setDescription(recipe.description || "");
+        setImage(recipe.image || "");
+        setOriginalImage(recipe.image || "");
+        setCookTime(recipe.cookTime || "");
+        setServings(recipe.servings?.toString() || "");
+        setCategory(recipe.category || "");
+        setArea(recipe.area || "");
+        setIngredients(recipe.ingredients?.join("\n") || "");
+        setInstructions(recipe.instructions?.join("\n") || "");
+        setIsPublic(recipe.isPublic !== false);
+      }
+    } catch (error) {
+      console.error("Error fetching recipe:", error);
+      Alert.alert("Error", "Failed to load recipe");
+      router.back();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Request permissions and pick image from gallery
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please grant camera roll permission.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        setLocalImageUri(uri);
+        setImage(uri);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image.");
+    }
+  };
+
+  // Take photo with camera
+  const takePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please grant camera permission.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const uri = result.assets[0].uri;
+        setLocalImageUri(uri);
+        setImage(uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo.");
+    }
+  };
 
   const validateForm = () => {
     if (!title.trim()) {
@@ -51,25 +141,38 @@ const AddRecipeScreen = () => {
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
-    setLoading(true);
+    setSaving(true);
     try {
-      // Parse ingredients (one per line)
+      let imageUrl = originalImage; // Keep original by default
+
+      // Upload new image if changed
+      if (localImageUri && localImageUri !== originalImage) {
+        setUploadingImage(true);
+        const uploadResult = await uploadImageToCloudinary(localImageUri);
+        setUploadingImage(false);
+
+        if (uploadResult.success) {
+          imageUrl = uploadResult.url;
+        } else {
+          Alert.alert("Warning", "Image upload failed. Original image will be kept.");
+          imageUrl = originalImage;
+        }
+      }
+
       const ingredientList = ingredients
         .split("\n")
         .map(i => i.trim())
         .filter(i => i.length > 0);
 
-      // Parse instructions (one per line)
       const instructionList = instructions
         .split("\n")
         .map(i => i.trim())
         .filter(i => i.length > 0);
 
       const recipeData = {
-        userId,
         title: title.trim(),
         description: description.trim(),
-        image: image.trim() || null,
+        image: imageUrl,
         cookTime: cookTime.trim() || null,
         servings: servings ? parseInt(servings) : null,
         category: category || null,
@@ -79,17 +182,26 @@ const AddRecipeScreen = () => {
         isPublic,
       };
 
-      await RecipeAPI.createRecipe(recipeData);
+      await RecipeAPI.updateRecipe(id, recipeData, userId);
 
-      Alert.alert("Success", "Recipe created successfully!", [
+      Alert.alert("Success", "Recipe updated successfully!", [
         { text: "OK", onPress: () => router.back() }
       ]);
     } catch (error) {
-      Alert.alert("Error", error.message || "Failed to create recipe");
+      Alert.alert("Error", error.message || "Failed to update recipe");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>Loading recipe...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -98,24 +210,42 @@ const AddRecipeScreen = () => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Recipe</Text>
+        <Text style={styles.headerTitle}>Edit Recipe</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Image URL */}
+        {/* Image Picker */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Recipe Image URL (optional)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://example.com/image.jpg"
-            placeholderTextColor={COLORS.textLight}
-            value={image}
-            onChangeText={setImage}
-          />
+          <Text style={styles.label}>Recipe Image</Text>
+          
           {image ? (
-            <Image source={{ uri: image }} style={styles.imagePreview} resizeMode="cover" />
-          ) : null}
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: image }} style={styles.imagePreview} resizeMode="cover" />
+              <TouchableOpacity 
+                style={styles.removeImageBtn}
+                onPress={() => {
+                  setImage("");
+                  setLocalImageUri("");
+                  setOriginalImage("");
+                }}
+              >
+                <Ionicons name="close-circle" size={28} color={COLORS.danger} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.imagePickerContainer}>
+              <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
+                <Ionicons name="images-outline" size={40} color={COLORS.primary} />
+                <Text style={styles.imagePickerText}>Choose from Gallery</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.imagePickerBtn} onPress={takePhoto}>
+                <Ionicons name="camera-outline" size={40} color={COLORS.primary} />
+                <Text style={styles.imagePickerText}>Take a Photo</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Title */}
@@ -251,14 +381,20 @@ const AddRecipeScreen = () => {
 
         {/* Submit Button */}
         <TouchableOpacity 
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]} 
+          style={[styles.submitButton, (saving || uploadingImage) && styles.submitButtonDisabled]} 
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={saving || uploadingImage}
         >
-          <Ionicons name="restaurant" size={20} color={COLORS.white} />
-          <Text style={styles.submitButtonText}>
-            {loading ? "Creating..." : "Create Recipe"}
-          </Text>
+          {saving || uploadingImage ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
+              <Text style={styles.submitButtonText}>
+                {saving ? "Saving..." : "Update Recipe"}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <View style={styles.bottomPadding} />
@@ -271,6 +407,17 @@ const styles = {
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: COLORS.textLight,
   },
   header: {
     backgroundColor: COLORS.primary,
@@ -315,11 +462,41 @@ const styles = {
     minHeight: 100,
     textAlignVertical: "top",
   },
+  imagePreviewContainer: {
+    position: "relative",
+  },
   imagePreview: {
     width: "100%",
     height: 200,
     borderRadius: 12,
-    marginTop: 10,
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+  },
+  imagePickerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  imagePickerBtn: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: "dashed",
+  },
+  imagePickerText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: COLORS.primary,
+    fontWeight: "600",
   },
   chipContainer: {
     flexDirection: "row",
@@ -411,4 +588,4 @@ const styles = {
   },
 };
 
-export default AddRecipeScreen;
+export default EditRecipeScreen;
