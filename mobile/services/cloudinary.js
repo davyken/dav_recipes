@@ -20,6 +20,11 @@ export const uploadImageToCloudinary = async (imageUri) => {
     
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
     
+    console.log("Uploading to Cloudinary:", {
+      cloudName: CLOUDINARY_CLOUD_NAME,
+      preset: CLOUDINARY_UPLOAD_PRESET
+    });
+    
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
       {
@@ -31,19 +36,21 @@ export const uploadImageToCloudinary = async (imageUri) => {
       }
     );
     
-    if (!response.ok) {
-      throw new Error("Failed to upload image");
-    }
+    const responseData = await response.json();
+    console.log("Cloudinary response:", responseData);
     
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(responseData.error?.message || "Failed to upload image");
+    }
     
     return {
       success: true,
-      url: data.secure_url,
-      publicId: data.public_id,
+      url: responseData.secure_url,
+      publicId: responseData.public_id,
     };
   } catch (error) {
     console.error("Cloudinary upload error:", error);
+    console.error("Error details:", error.message);
     return {
       success: false,
       error: error.message,
