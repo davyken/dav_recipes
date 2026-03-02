@@ -101,4 +101,5 @@ export const COLORS = {
   ...THEMES.purple,
   danger: "#E53935",
   secondary: "#9C27B0",
+  success: "#4CAF50",
 };

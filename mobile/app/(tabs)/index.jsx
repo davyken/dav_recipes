@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, FlatList, RefreshControl } fr
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { MealAPI } from "../../services/mealAPI";
+import { RecipeAPI } from "../../services/api";
 import { homeStyles } from "../../assets/styles/home.styles";
 import { Image } from "expo-image";
 import { COLORS } from "../../constants/colors";
@@ -16,6 +17,7 @@ const HomeScreen = () => {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [recipes, setRecipes] = useState([]);
+  const [userRecipes, setUserRecipes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [featuredRecipe, setFeaturedRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,12 @@ const HomeScreen = () => {
     try {
       setLoading(true);
 
-      const [apiCategories, randomMeals, featuredMeal] = await Promise.all([
+      // Fetch both MealDB and user public recipes in parallel
+      const [apiCategories, randomMeals, featuredMeal, publicUserRecipes] = await Promise.all([
         MealAPI.getCategories(),
         MealAPI.getRandomMeals(12),
         MealAPI.getRandomMeal(),
+        RecipeAPI.getPublicRecipes().catch(() => []), // Get public user recipes
       ]);
 
       const transformedCategories = apiCategories.map((cat, index) => ({
@@ -47,6 +51,21 @@ const HomeScreen = () => {
         .filter((meal) => meal !== null);
 
       setRecipes(transformedMeals);
+
+      // Transform user recipes to match the recipe card format
+      const transformedUserRecipes = publicUserRecipes.map(recipe => ({
+        id: `user_${recipe.id}`,
+        title: recipe.title,
+        description: recipe.description,
+        image: recipe.image,
+        cookTime: recipe.cookTime,
+        servings: recipe.servings,
+        category: recipe.category,
+        area: recipe.area,
+        isUserRecipe: true, // Flag to identify user recipes
+      }));
+      
+      setUserRecipes(transformedUserRecipes);
 
       const transformedFeatured = MealAPI.transformMealData(featuredMeal);
       setFeaturedRecipe(transformedFeatured);
@@ -180,6 +199,25 @@ const HomeScreen = () => {
             selectedCategory={selectedCategory}
             onSelectCategory={handleCategorySelect}
           />
+        )}
+
+        {/* User Recipes Section - Show public user recipes */}
+        {userRecipes.length > 0 && (
+          <View style={homeStyles.recipesSection}>
+            <View style={homeStyles.sectionHeader}>
+              <Text style={homeStyles.sectionTitle}>Community Recipes</Text>
+              <Text style={homeStyles.sectionSubtitle}>Recipes from our users</Text>
+            </View>
+            <FlatList
+              data={userRecipes}
+              renderItem={({ item }) => <RecipeCard recipe={item} />}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              columnWrapperStyle={homeStyles.row}
+              contentContainerStyle={homeStyles.recipesGrid}
+              scrollEnabled={false}
+            />
+          </View>
         )}
 
         <View style={homeStyles.recipesSection}>
