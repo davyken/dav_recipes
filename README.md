@@ -138,11 +138,6 @@ backend/
 - Image caching for performance
 
 ---
-
-## Screenshots
-
-![App Screenshot](/mobile/assets/images/screenshot-for-readme.png)
-
 ---
 
 ## Tech Stack
