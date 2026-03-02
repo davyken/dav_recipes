@@ -308,9 +308,8 @@ Separating concerns between presentation (screens), business logic (services), a
 
 ## Contact
 
-- Email: [your-email@example.com]
-- GitHub: [github.com/yourusername]
-- LinkedIn: [linkedin.com/in/yourprofile]
+- Email: [davykennang552@gmail.com]
+- LinkedIn: [(https://www.linkedin.com/in/davy-kennang-788047298/)]
 
 ---
 
