@@ -14,6 +14,7 @@ import HomePage from "./pages/Home";
 import AddRecipePage from "./pages/AddRecipe";
 import EditRecipePage from "./pages/EditRecipe";
 import RestaurantsPage from "./pages/Restaurants";
+import RestaurantDetailPage from "./pages/RestaurantDetail";
 
 // Components
 import DashboardLayout from "./components/DashboardLayout";
@@ -64,7 +65,7 @@ function App() {
           <Route path="/recipe/:id" element={<RecipeDetailPage />} />
           
           {/* Restaurant Detail - Visible to everyone */}
-          <Route path="/restaurant/:id" element={<RecipeDetailPage />} />
+          <Route path="/restaurant/:id" element={<RestaurantDetailPage />} />
           
           {/* Authenticated Pages - Dashboard Layout */}
           <Route path="/*" element={

@@ -165,6 +165,15 @@ const DashboardLayout = () => {
           ❤️ Favorites
         </Link>
         <Link 
+          to="/restaurants" 
+          style={{
+            ...dashboardStyles.navLink,
+            ...(isActive("/restaurants") ? dashboardStyles.navLinkActive : {}),
+          }}
+        >
+          🍽️ Restaurants
+        </Link>
+        <Link 
           to="/profile" 
           style={{
             ...dashboardStyles.navLink,
