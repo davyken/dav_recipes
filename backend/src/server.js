@@ -2,9 +2,10 @@ import express from "express";
 import cors from "cors";
 import { ENV } from "./config/env.js";
 import { db } from "./config/db.js";
-import { favoritesTable, restaurantsTable, menuItemsTable, ordersTable, orderItemsTable, userRecipesTable, addressesTable } from "./db/schema.js";
+import { favoritesTable, restaurantsTable, menuItemsTable, ordersTable, orderItemsTable, userRecipesTable, addressesTable, usersTable } from "./db/schema.js";
 import { and, eq, asc, like, or } from "drizzle-orm";
 import job from "./config/cron.js";
+import crypto from "crypto";
 
 const app = express();
 const PORT = ENV.PORT || 5001;
@@ -19,6 +20,212 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({ success: true });
+});
+
+// ============ AUTHENTICATION API ============
+
+// Simple hash function for passwords (in production, use bcrypt)
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+// Generate verification code
+function generateVerificationCode() {
+  return crypto.randomBytes(3).toString("hex").toUpperCase();
+}
+
+// Generate user ID
+function generateUserId() {
+  return crypto.randomUUID();
+}
+
+// Register new user
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    // Check if user already exists
+    const existingUser = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({ error: "Email already registered" });
+    }
+
+    // Generate verification code
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Create new user
+    const newUser = await db
+      .insert(usersTable)
+      .values({
+        userId: generateUserId(),
+        email,
+        username: username || email.split("@")[0],
+        password: hashPassword(password),
+        verificationCode,
+        verificationCodeExpiry,
+        emailVerified: false,
+      })
+      .returning();
+
+    // In production, send email with verification code
+    // For now, return the code in the response (development only)
+    res.status(201).json({
+      message: "Registration successful. Please verify your email.",
+      userId: newUser[0].userId,
+      email: newUser[0].email,
+      verificationCode: verificationCode, // Remove in production
+    });
+  } catch (error) {
+    console.log("Error registering user", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Verify email
+app.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: "Email and verification code are required" });
+    }
+
+    const user = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user[0].emailVerified) {
+      return res.status(400).json({ error: "Email already verified" });
+    }
+
+    if (user[0].verificationCode !== code) {
+      return res.status(400).json({ error: "Invalid verification code" });
+    }
+
+    if (new Date() > new Date(user[0].verificationCodeExpiry)) {
+      return res.status(400).json({ error: "Verification code expired" });
+    }
+
+    // Update user as verified
+    await db
+      .update(usersTable)
+      .set({
+        emailVerified: true,
+        verificationCode: null,
+        verificationCodeExpiry: null,
+      })
+      .where(eq(usersTable.email, email));
+
+    res.status(200).json({ message: "Email verified successfully" });
+  } catch (error) {
+    console.log("Error verifying email", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Login
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
+
+    const user = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (user.length === 0) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    if (!user[0].emailVerified) {
+      return res.status(401).json({ error: "Please verify your email first" });
+    }
+
+    if (user[0].password !== hashPassword(password)) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Return user info (in production, return JWT token)
+    res.status(200).json({
+      message: "Login successful",
+      user: {
+        id: user[0].id,
+        userId: user[0].userId,
+        email: user[0].email,
+        username: user[0].username,
+      },
+    });
+  } catch (error) {
+    console.log("Error logging in", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Resend verification code
+app.post("/api/auth/resend-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const user = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email));
+
+    if (user.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user[0].emailVerified) {
+      return res.status(400).json({ error: "Email already verified" });
+    }
+
+    // Generate new verification code
+    const verificationCode = generateVerificationCode();
+    const verificationCodeExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await db
+      .update(usersTable)
+      .set({
+        verificationCode,
+        verificationCodeExpiry,
+      })
+      .where(eq(usersTable.email, email));
+
+    // In production, send email with verification code
+    res.status(200).json({
+      message: "Verification code sent",
+      verificationCode: verificationCode, // Remove in production
+    });
+  } catch (error) {
+    console.log("Error resending code", error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
 });
 
 // ============ GOOGLE PLACES API ============

@@ -84,10 +84,24 @@ export const userRecipesTable = pgTable("user_recipes", {
 export const addressesTable = pgTable("addresses", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
-  label: text("label"), // e.g., "Home", "Office"
+  label: text("label"), // e.g. "Home", "Office"
   address: text("address").notNull(),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   isDefault: boolean("is_default").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Users table for authentication
+export const usersTable = pgTable("users", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(), // Clerk user ID or generated UUID
+  email: text("email").notNull().unique(),
+  username: text("username"),
+  password: text("password"), // Hashed password
+  emailVerified: boolean("email_verified").default(false),
+  verificationCode: text("verification_code"),
+  verificationCodeExpiry: timestamp("verification_code_expiry"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
