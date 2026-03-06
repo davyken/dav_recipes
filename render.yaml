@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: recipe-app-backend
+    env: node
+    region: oregon
+    buildCommand: cd backend && yarn install
+    startCommand: sh -c "cd backend && node src/server.js"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
