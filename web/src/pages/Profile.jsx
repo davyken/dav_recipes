@@ -34,11 +34,13 @@ const profileStyles = {
     borderBottomLeftRadius: "30px",
     borderBottomRightRadius: "30px",
     paddingBottom: "60px",
+    textAlign: "center",
   },
   avatarContainer: {
     marginBottom: "15px",
     position: "relative",
-    display: "inline-block",
+    display: "flex",
+    justifyContent: "center",
   },
   avatar: {
     width: "100px",
@@ -72,24 +74,28 @@ const profileStyles = {
     cursor: "pointer",
   },
   name: {
-    fontSize: "24px",
+    fontSize: "28px",
     fontWeight: "bold",
     color: COLORS.white,
     marginBottom: "5px",
+    textAlign: "center",
   },
   email: {
     fontSize: "14px",
     color: COLORS.white,
     opacity: 0.8,
+    textAlign: "center",
   },
   statsRow: {
     display: "flex",
     marginTop: "20px",
     paddingHorizontal: "20px",
     gap: "30px",
+    justifyContent: "center",
   },
   statItem: {
     alignItems: "center",
+    textAlign: "center",
   },
   statNumber: {
     fontSize: "20px",

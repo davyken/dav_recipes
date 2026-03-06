@@ -1,46 +1,82 @@
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { COLORS } from "../constants/colors";
 
 const dashboardStyles = {
   container: {
+    display: "flex",
     minHeight: "100vh",
     backgroundColor: COLORS.background,
+  },
+  sidebar: {
+    width: "260px",
+    backgroundColor: COLORS.primary,
     display: "flex",
     flexDirection: "column",
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    padding: "20px",
-    paddingTop: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    position: "sticky",
+    position: "fixed",
+    height: "100vh",
+    left: 0,
     top: 0,
-    zIndex: 100,
   },
   logo: {
-    fontSize: "20px",
+    padding: "30px 20px",
+    fontSize: "24px",
     fontWeight: "bold",
     color: COLORS.white,
-    textDecoration: "none",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
   },
-  userInfo: {
+  nav: {
+    flex: 1,
+    padding: "20px 0",
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  },
+  navLink: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "15px 20px",
+    color: COLORS.white,
+    textDecoration: "none",
+    fontSize: "15px",
+    fontWeight: "500",
+    transition: "all 0.2s",
+    opacity: 0.8,
+  },
+  navLinkActive: {
+    backgroundColor: "rgba(255,255,255,0.15)",
+    opacity: 1,
+    borderLeft: "4px solid white",
+  },
+  userSection: {
+    padding: "20px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
     display: "flex",
     alignItems: "center",
     gap: "12px",
   },
+  userInfo: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  userAvatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    border: "2px solid rgba(255,255,255,0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    fontSize: "20px",
+  },
   userName: {
     color: COLORS.white,
     fontSize: "14px",
-    fontWeight: "500",
-  },
-  avatar: {
-    width: "36px",
-    height: "36px",
-    borderRadius: "50%",
-    border: `2px solid ${COLORS.white}`,
+    fontWeight: "600",
   },
   logoutButton: {
     padding: "8px 16px",
@@ -54,39 +90,39 @@ const dashboardStyles = {
   },
   mainContent: {
     flex: 1,
-    padding: "20px",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    width: "100%",
+    marginLeft: "260px",
+    padding: "30px",
+    maxWidth: "calc(100% - 260px)",
   },
-  nav: {
+  header: {
     display: "flex",
-    gap: "10px",
-    padding: "15px 20px",
-    backgroundColor: COLORS.white,
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "30px",
+    paddingBottom: "20px",
     borderBottom: `1px solid ${COLORS.border}`,
-    overflowX: "auto",
   },
-  navLink: {
-    padding: "10px 20px",
-    borderRadius: "8px",
-    textDecoration: "none",
+  headerTitle: {
+    fontSize: "28px",
+    fontWeight: "bold",
     color: COLORS.text,
-    fontSize: "14px",
-    fontWeight: "500",
-    whiteSpace: "nowrap",
-    transition: "all 0.2s",
   },
-  navLinkActive: {
+  headerRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+  },
+  addRecipeButton: {
     backgroundColor: COLORS.primary,
     color: COLORS.white,
-  },
-  footer: {
-    backgroundColor: COLORS.primary,
-    padding: "20px",
-    textAlign: "center",
-    color: COLORS.white,
+    padding: "12px 24px",
+    borderRadius: "12px",
+    border: "none",
+    cursor: "pointer",
     fontSize: "14px",
+    fontWeight: "600",
+    textDecoration: "none",
+    display: "inline-block",
   },
 };
 
@@ -106,93 +142,99 @@ const DashboardLayout = () => {
 
   return (
     <div style={dashboardStyles.container}>
-      {/* Header */}
-      <header style={dashboardStyles.header}>
-        <Link to="/" style={dashboardStyles.logo}>
+      {/* Sidebar */}
+      <aside style={dashboardStyles.sidebar}>
+        <div style={dashboardStyles.logo}>
           🍳 Recipe App
-        </Link>
-        <div style={dashboardStyles.userInfo}>
-          {user?.imageUrl ? (
-            <img src={user.imageUrl} alt="Profile" style={dashboardStyles.avatar} />
-          ) : (
-            <div style={{ ...dashboardStyles.avatar, backgroundColor: COLORS.textLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: COLORS.white, fontSize: "14px" }}>👤</span>
-            </div>
-          )}
-          <span style={dashboardStyles.userName}>{user?.username || user?.fullName || "User"}</span>
-          <button style={dashboardStyles.logoutButton} onClick={handleSignOut}>
-            Sign Out
+        </div>
+
+        {/* Navigation */}
+        <nav style={dashboardStyles.nav}>
+          <Link 
+            to="/home" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/home") || isActive("/") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            🏠 Home
+          </Link>
+          <Link 
+            to="/search" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/search") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            🔍 Search
+          </Link>
+          <Link 
+            to="/my-recipes" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/my-recipes") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            📖 My Recipes
+          </Link>
+          <Link 
+            to="/add-recipe" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/add-recipe") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            ➕ Add Recipe
+          </Link>
+          <Link 
+            to="/favorites" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/favorites") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            ❤️ Favorites
+          </Link>
+          <Link 
+            to="/restaurants" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/restaurants") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            🍽️ Restaurants
+          </Link>
+          <Link 
+            to="/profile" 
+            style={{
+              ...dashboardStyles.navLink,
+              ...(isActive("/profile") ? dashboardStyles.navLinkActive : {}),
+            }}
+          >
+            👤 Profile
+          </Link>
+        </nav>
+
+        {/* User Section at Top */}
+        <div style={dashboardStyles.userSection}>
+          <div style={dashboardStyles.userInfo}>
+            {user?.imageUrl ? (
+              <img src={user.imageUrl} alt="Profile" style={dashboardStyles.userAvatar} />
+            ) : (
+              <div style={dashboardStyles.userAvatar}>👤</div>
+            )}
+            <span style={dashboardStyles.userName}>{user?.username || user?.fullName || "User"}</span>
+          </div>
+          <button style={dashboardStyles.logoutButton} onClick={handleSignOut} title="Sign Out">
+            🚪
           </button>
         </div>
-      </header>
-
-      {/* Navigation */}
-      <nav style={dashboardStyles.nav}>
-        <Link 
-          to="/home" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/home") || isActive("/") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          🏠 Home
-        </Link>
-        <Link 
-          to="/search" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/search") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          🔍 Search
-        </Link>
-        <Link 
-          to="/my-recipes" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/my-recipes") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          📖 My Recipes
-        </Link>
-        <Link 
-          to="/favorites" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/favorites") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          ❤️ Favorites
-        </Link>
-        <Link 
-          to="/restaurants" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/restaurants") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          🍽️ Restaurants
-        </Link>
-        <Link 
-          to="/profile" 
-          style={{
-            ...dashboardStyles.navLink,
-            ...(isActive("/profile") ? dashboardStyles.navLinkActive : {}),
-          }}
-        >
-          👤 Profile
-        </Link>
-      </nav>
+      </aside>
 
       {/* Main Content */}
       <main style={dashboardStyles.mainContent}>
         <Outlet />
       </main>
-
-      {/* Footer */}
-      <footer style={dashboardStyles.footer}>
-        <p>© 2024 Recipe App. All rights reserved.</p>
-      </footer>
     </div>
   );
 };

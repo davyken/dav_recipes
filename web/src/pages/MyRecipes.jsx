@@ -589,9 +589,6 @@ const MyRecipesPage = () => {
               <span style={{ fontSize: "80px" }}>📖</span>
               <h3 style={myRecipesStyles.emptyTitle}>No Recipes Yet</h3>
               <p style={myRecipesStyles.emptySubtitle}>Create your first recipe!</p>
-              <button style={myRecipesStyles.addButton} onClick={() => setActiveTab("addRecipe")}>
-                ➕ Add Recipe
-              </button>
             </div>
           )}
         </div>

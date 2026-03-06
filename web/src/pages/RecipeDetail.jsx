@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { COLORS } from "../constants/colors";
 import { MealAPI } from "../services/mealAPI";
-import { RecipeAPI } from "../services/api";
+import { RecipeAPI, FavoritesAPI } from "../services/api";
 
 const recipeDetailStyles = {
   container: {
@@ -207,7 +207,19 @@ const RecipeDetailPage = () => {
 
   useEffect(() => {
     loadRecipeDetail();
-  }, [recipeId]);
+    checkIfSaved();
+  }, [recipeId, isSignedIn, userId]);
+
+  const checkIfSaved = async () => {
+    if (!isSignedIn || !userId) return;
+    try {
+      const favorites = await FavoritesAPI.getFavorites(userId);
+      const isRecipeSaved = favorites.some(f => f.recipeId === recipeId);
+      setIsSaved(isRecipeSaved);
+    } catch (error) {
+      console.error("Error checking favorites:", error);
+    }
+  };
 
   const loadRecipeDetail = async () => {
     setLoading(true);
@@ -247,9 +259,21 @@ const RecipeDetailPage = () => {
 
     setIsSaving(true);
     try {
-      // For simplicity, we'll just show an alert
-      // In production, you'd call the favorites API
-      setIsSaved(!isSaved);
+      if (isSaved) {
+        // Remove from favorites
+        await FavoritesAPI.removeFavorite(userId, recipeId);
+        setIsSaved(false);
+      } else {
+        // Add to favorites
+        await FavoritesAPI.addFavorite({
+          userId,
+          recipeId,
+          title: recipe.title,
+          image: recipe.image,
+          category: recipe.category,
+        });
+        setIsSaved(true);
+      }
     } catch (error) {
       console.error("Error saving recipe:", error);
     } finally {

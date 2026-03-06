@@ -255,17 +255,6 @@ const FavoritesPage = () => {
           </div>
         )}
       </div>
-
-      {/* Footer */}
-      <footer style={{ 
-        textAlign: 'center', 
-        padding: '40px 20px',
-        backgroundColor: COLORS.primary,
-        color: COLORS.white,
-        marginTop: '40px'
-      }}>
-        <p>© 2024 Recipe App. All rights reserved.</p>
-      </footer>
     </div>
   );
 };

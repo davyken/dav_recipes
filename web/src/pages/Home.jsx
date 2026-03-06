@@ -221,7 +221,7 @@ const HomePage = () => {
       // Fetch both MealDB and user public recipes in parallel
       const [apiCategories, randomMeals, featuredMeal, publicUserRecipes] = await Promise.all([
         MealAPI.getCategories(),
-        MealAPI.getRandomMeals(8),
+        MealAPI.getRandomMeals(20),
         MealAPI.getRandomMeal(),
         RecipeAPI.getPublicRecipes().catch(() => []),
       ]);
@@ -273,7 +273,7 @@ const HomePage = () => {
       const transformedMeals = meals
         .map((meal) => MealAPI.transformMealData(meal))
         .filter((meal) => meal !== null);
-      setRecipes(transformedMeals.slice(0, 8)); // Limit to 8
+      setRecipes(transformedMeals.slice(0, 20)); // Limit to 20
     } catch (error) {
       console.error("Error loading category data:", error);
       setRecipes([]);
@@ -304,18 +304,6 @@ const HomePage = () => {
         <p style={homeStyles.welcomeSubtitle}>
           Discover and share amazing recipes
         </p>
-      </div>
-
-      {/* Quick Actions */}
-      <div style={homeStyles.quickActions}>
-        <Link to="/my-recipes" style={homeStyles.actionCard}>
-          <div style={homeStyles.actionIcon}>➕</div>
-          <div style={homeStyles.actionTitle}>Add Recipe</div>
-        </Link>
-        <Link to="/search" style={homeStyles.actionCard}>
-          <div style={homeStyles.actionIcon}>🔍</div>
-          <div style={homeStyles.actionTitle}>Search</div>
-        </Link>
       </div>
 
       {/* Featured Recipe */}
@@ -388,7 +376,7 @@ const HomePage = () => {
             <Link to="/search" style={homeStyles.seeAllLink}>See All</Link>
           </div>
           <div style={homeStyles.recipesGrid}>
-            {userRecipes.slice(0, 4).map((recipe) => (
+            {userRecipes.slice(0, 20).map((recipe) => (
               <div
                 key={recipe.id}
                 style={homeStyles.recipeCard}

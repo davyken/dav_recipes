@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 
 // Pages
@@ -26,17 +26,7 @@ const CLERK_PUBLISHABLE_KEY = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY || "pk
 const AuthenticatedApp = () => {
   return (
     <DashboardLayout>
-      <Routes>
-        <Route path="/home" element={<HomePage />} />
-        <Route path="/search" element={<SearchPage />} />
-        <Route path="/favorites" element={<FavoritesPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/my-recipes" element={<MyRecipesPage />} />
-        <Route path="/add-recipe" element={<AddRecipePage />} />
-        <Route path="/restaurants" element={<RestaurantsPage />} />
-        <Route path="/recipe/edit/:id" element={<EditRecipePage />} />
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Routes>
+      <Outlet />
     </DashboardLayout>
   );
 };
@@ -68,11 +58,21 @@ function App() {
           <Route path="/restaurant/:id" element={<RestaurantDetailPage />} />
           
           {/* Authenticated Pages - Dashboard Layout */}
-          <Route path="/*" element={
+          <Route element={
             <SignedIn>
               <AuthenticatedApp />
             </SignedIn>
-          } />
+          }>
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/my-recipes" element={<MyRecipesPage />} />
+            <Route path="/add-recipe" element={<AddRecipePage />} />
+            <Route path="/restaurants" element={<RestaurantsPage />} />
+            <Route path="/recipe/edit/:id" element={<EditRecipePage />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Route>
         </Routes>
       </Router>
     </ClerkProvider>
