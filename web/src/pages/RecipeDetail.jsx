@@ -208,6 +208,7 @@ const RecipeDetailPage = () => {
   useEffect(() => {
     loadRecipeDetail();
     checkIfSaved();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeId, isSignedIn, userId]);
 
   const checkIfSaved = async () => {

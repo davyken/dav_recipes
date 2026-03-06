@@ -190,7 +190,7 @@ const restaurantDetailStyles = {
 };
 
 const RestaurantDetailPage = () => {
-  const { id } = useParams();
+  const { } = useParams();
   const [searchParams] = useSearchParams();
   
   // Try to parse restaurant data from query params
@@ -212,7 +212,8 @@ const RestaurantDetailPage = () => {
     if (restaurant?.placeId && !restaurant.placeId.startsWith("sample") && !restaurant.placeId.startsWith("local_")) {
       fetchRestaurantDetails();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurant?.placeId]);
 
   const fetchRestaurantDetails = async () => {
     if (!restaurant?.placeId) return;

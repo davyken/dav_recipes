@@ -220,6 +220,7 @@ const RestaurantsPage = () => {
 
   useEffect(() => {
     getCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getCurrentLocation = () => {
