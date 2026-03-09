@@ -391,7 +391,7 @@ const RestaurantDetailPage = () => {
         color: COLORS.white,
         marginTop: '40px'
       }}>
-        <p>© 2024 Recipe App. All rights reserved.</p>
+        <p>© 2026 Recipe App. All rights reserved.</p>
       </footer>
     </div>
   );

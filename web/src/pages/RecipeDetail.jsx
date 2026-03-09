@@ -444,7 +444,7 @@ const RecipeDetailPage = () => {
         backgroundColor: COLORS.primary,
         color: COLORS.white,
       }}>
-        <p>© 2024 Recipe App. All rights reserved.</p>
+        <p>© 2026 Recipe App. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -8,176 +8,220 @@ const landingStyles = {
   container: {
     minHeight: "100vh",
     backgroundColor: COLORS.background,
+    fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif",
   },
   header: {
     backgroundColor: COLORS.primary,
-    padding: "20px",
-    paddingTop: "40px",
+    padding: "20px 40px",
+    paddingTop: "24px",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
+    boxShadow: "0 2px 20px rgba(106, 27, 154, 0.2)",
   },
-  logo: {
+  logoContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  logoImage: {
+    width: "48px",
+    height: "48px",
+  },
+  logoText: {
     fontSize: "24px",
     fontWeight: "bold",
     color: COLORS.white,
+    letterSpacing: "1px",
   },
   authButtons: {
     display: "flex",
-    gap: "12px",
+    gap: "16px",
   },
   signInButton: {
-    padding: "10px 20px",
+    padding: "12px 28px",
     borderRadius: "8px",
-    border: `1px solid ${COLORS.white}`,
-    backgroundColor: "transparent",
-    color: COLORS.white,
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "600",
-    textDecoration: "none",
-    display: "inline-block",
-  },
-  signUpButton: {
-    padding: "10px 20px",
-    borderRadius: "8px",
-    border: "none",
-    backgroundColor: COLORS.white,
-    color: COLORS.primary,
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "600",
-    textDecoration: "none",
-    display: "inline-block",
-  },
-  heroSection: {
-    backgroundColor: COLORS.primary,
-    padding: "60px 20px",
-    textAlign: "center",
-    borderBottomLeftRadius: "50px",
-    borderBottomRightRadius: "50px",
-  },
-  heroTitle: {
-    fontSize: "48px",
-    fontWeight: "bold",
-    color: COLORS.white,
-    marginBottom: "20px",
-  },
-  heroSubtitle: {
-    fontSize: "20px",
-    color: COLORS.white,
-    opacity: 0.9,
-    maxWidth: "600px",
-    margin: "0 auto 30px",
-  },
-  ctaButtons: {
-    display: "flex",
-    gap: "16px",
-    justifyContent: "center",
-  },
-  ctaPrimary: {
-    padding: "16px 40px",
-    borderRadius: "12px",
-    border: "none",
-    backgroundColor: COLORS.white,
-    color: COLORS.primary,
-    cursor: "pointer",
-    fontSize: "18px",
-    fontWeight: "600",
-    textDecoration: "none",
-    display: "inline-block",
-  },
-  ctaSecondary: {
-    padding: "16px 40px",
-    borderRadius: "12px",
     border: `2px solid ${COLORS.white}`,
     backgroundColor: "transparent",
     color: COLORS.white,
     cursor: "pointer",
-    fontSize: "18px",
+    fontSize: "15px",
     fontWeight: "600",
     textDecoration: "none",
     display: "inline-block",
+    transition: "all 0.3s ease",
+  },
+  signUpButton: {
+    padding: "12px 28px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: COLORS.white,
+    color: COLORS.primary,
+    cursor: "pointer",
+    fontSize: "15px",
+    fontWeight: "600",
+    textDecoration: "none",
+    display: "inline-block",
+    transition: "all 0.3s ease",
+    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+  },
+  heroSection: {
+    backgroundColor: COLORS.primary,
+    padding: "80px 20px 120px",
+    textAlign: "center",
+    borderBottomLeftRadius: "80px",
+    borderBottomRightRadius: "80px",
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroPattern: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.1,
+    backgroundImage: "radial-gradient(circle at 20% 80%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 40%)",
+  },
+  heroTitle: {
+    fontSize: "56px",
+    fontWeight: "800",
+    color: COLORS.white,
+    marginBottom: "24px",
+    letterSpacing: "-1px",
+    position: "relative",
+  },
+  heroSubtitle: {
+    fontSize: "22px",
+    color: COLORS.white,
+    opacity: 0.95,
+    maxWidth: "700px",
+    margin: "0 auto 40px",
+    lineHeight: "1.6",
+    position: "relative",
+  },
+  ctaButtons: {
+    display: "flex",
+    gap: "20px",
+    justifyContent: "center",
+    position: "relative",
+  },
+  ctaPrimary: {
+    padding: "18px 48px",
+    borderRadius: "14px",
+    border: "none",
+    backgroundColor: COLORS.white,
+    color: COLORS.primary,
+    cursor: "pointer",
+    fontSize: "18px",
+    fontWeight: "700",
+    textDecoration: "none",
+    display: "inline-block",
+    transition: "all 0.3s ease",
+    boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+  },
+  ctaSecondary: {
+    padding: "18px 48px",
+    borderRadius: "14px",
+    border: `3px solid ${COLORS.white}`,
+    backgroundColor: "transparent",
+    color: COLORS.white,
+    cursor: "pointer",
+    fontSize: "18px",
+    fontWeight: "700",
+    textDecoration: "none",
+    display: "inline-block",
+    transition: "all 0.3s ease",
   },
   featuresSection: {
-    padding: "60px 20px",
-    maxWidth: "1000px",
+    padding: "80px 20px",
+    maxWidth: "1100px",
     margin: "0 auto",
   },
   sectionTitle: {
-    fontSize: "32px",
-    fontWeight: "bold",
+    fontSize: "36px",
+    fontWeight: "700",
     color: COLORS.text,
     textAlign: "center",
-    marginBottom: "40px",
+    marginBottom: "50px",
   },
   featuresGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: "30px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "40px",
   },
   featureCard: {
     backgroundColor: COLORS.white,
-    borderRadius: "16px",
-    padding: "30px",
+    borderRadius: "20px",
+    padding: "40px 30px",
     textAlign: "center",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    boxShadow: "0 8px 40px rgba(0,0,0,0.08)",
+    transition: "all 0.3s ease",
+    border: "1px solid rgba(106, 27, 154, 0.1)",
   },
   featureIcon: {
-    fontSize: "48px",
-    marginBottom: "20px",
+    fontSize: "56px",
+    marginBottom: "24px",
+    display: "block",
   },
   featureTitle: {
-    fontSize: "20px",
-    fontWeight: "bold",
+    fontSize: "22px",
+    fontWeight: "700",
     color: COLORS.text,
-    marginBottom: "10px",
+    marginBottom: "14px",
   },
   featureText: {
-    fontSize: "14px",
+    fontSize: "15px",
     color: COLORS.textLight,
+    lineHeight: "1.7",
   },
   recipesSection: {
-    padding: "60px 20px",
+    padding: "80px 20px",
     backgroundColor: COLORS.white,
   },
   recipesGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
-    gap: "20px",
-    maxWidth: "1000px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: "30px",
+    maxWidth: "1100px",
     margin: "0 auto",
   },
   recipeCard: {
-    borderRadius: "16px",
+    borderRadius: "20px",
     overflow: "hidden",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.1)",
     cursor: "pointer",
-    transition: "transform 0.2s",
+    transition: "all 0.3s ease",
+    backgroundColor: COLORS.white,
   },
   recipeImage: {
     width: "100%",
-    height: "200px",
+    height: "220px",
     objectFit: "cover",
   },
   recipeContent: {
-    padding: "15px",
+    padding: "20px",
   },
   recipeTitle: {
-    fontSize: "16px",
-    fontWeight: "bold",
+    fontSize: "17px",
+    fontWeight: "700",
     color: COLORS.text,
+    marginBottom: "8px",
   },
   recipeCategory: {
-    fontSize: "12px",
+    fontSize: "13px",
     color: COLORS.textLight,
-    marginTop: "5px",
+    fontWeight: "500",
   },
   footer: {
     backgroundColor: COLORS.primary,
-    padding: "40px 20px",
+    padding: "50px 20px",
     textAlign: "center",
     color: COLORS.white,
+  },
+  footerText: {
+    fontSize: "15px",
+    opacity: 0.9,
   },
 };
 
@@ -215,7 +259,14 @@ const LandingPage = () => {
     <div style={landingStyles.container}>
       {/* Header */}
       <header style={landingStyles.header}>
-        <div style={landingStyles.logo}>🍳 Recipe App</div>
+        <div style={landingStyles.logoContainer}>
+          <img 
+            src="/logo.svg" 
+            alt="Recipe App Logo" 
+            style={landingStyles.logoImage}
+          />
+          <span style={landingStyles.logoText}>RECIPE</span>
+        </div>
         <div style={landingStyles.authButtons}>
           <Link to="/sign-in" style={landingStyles.signInButton}>Sign In</Link>
           <Link to="/sign-up" style={landingStyles.signUpButton}>Sign Up</Link>
@@ -224,6 +275,7 @@ const LandingPage = () => {
 
       {/* Hero Section */}
       <section style={landingStyles.heroSection}>
+        <div style={landingStyles.heroPattern}></div>
         <h1 style={landingStyles.heroTitle}>Discover Delicious Recipes</h1>
         <p style={landingStyles.heroSubtitle}>
           Explore thousands of recipes from around the world. Create your own recipes and share them with the community.
@@ -292,7 +344,7 @@ const LandingPage = () => {
 
       {/* Footer */}
       <footer style={landingStyles.footer}>
-        <p>© 2024 Recipe App. All rights reserved.</p>
+        <p style={landingStyles.footerText}>© 2026 Recipe App. All rights reserved.</p>
       </footer>
     </div>
   );
