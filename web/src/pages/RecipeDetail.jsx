@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { COLORS } from "../constants/colors";
@@ -205,13 +205,7 @@ const RecipeDetailPage = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    loadRecipeDetail();
-    checkIfSaved();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipeId, isSignedIn, userId]);
-
-  const checkIfSaved = async () => {
+  const checkIfSaved = useCallback(async () => {
     if (!isSignedIn || !userId) return;
     try {
       const favorites = await FavoritesAPI.getFavorites(userId);
@@ -220,9 +214,9 @@ const RecipeDetailPage = () => {
     } catch (error) {
       console.error("Error checking favorites:", error);
     }
-  };
+  }, [isSignedIn, userId, recipeId]);
 
-  const loadRecipeDetail = async () => {
+  const loadRecipeDetail = useCallback(async () => {
     setLoading(true);
     try {
       // Check if it's a user recipe (starts with "user_")
@@ -250,7 +244,12 @@ const RecipeDetailPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [recipeId]);
+
+  useEffect(() => {
+    loadRecipeDetail();
+    checkIfSaved();
+  }, [loadRecipeDetail, checkIfSaved]);
 
   const handleToggleSave = async () => {
     if (!isSignedIn) {

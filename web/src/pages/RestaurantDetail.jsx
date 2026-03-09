@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { COLORS } from "../constants/colors";
 import { GooglePlacesAPI } from "../services/api";
 
@@ -190,7 +190,6 @@ const restaurantDetailStyles = {
 };
 
 const RestaurantDetailPage = () => {
-  const { } = useParams();
   const [searchParams] = useSearchParams();
   
   // Try to parse restaurant data from query params
@@ -207,15 +206,7 @@ const RestaurantDetailPage = () => {
   const [restaurant, setRestaurant] = useState(initialRestaurant);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  // Fetch additional details from API if needed
-  useEffect(() => {
-    if (restaurant?.placeId && !restaurant.placeId.startsWith("sample") && !restaurant.placeId.startsWith("local_")) {
-      fetchRestaurantDetails();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restaurant?.placeId]);
-
-  const fetchRestaurantDetails = async () => {
+  const fetchRestaurantDetails = useCallback(async () => {
     if (!restaurant?.placeId) return;
     
     setLoadingDetails(true);
@@ -236,7 +227,14 @@ const RestaurantDetailPage = () => {
     } finally {
       setLoadingDetails(false);
     }
-  };
+  }, [restaurant?.placeId]);
+
+  // Fetch additional details from API if needed
+  useEffect(() => {
+    if (restaurant?.placeId && !restaurant.placeId.startsWith("sample") && !restaurant.placeId.startsWith("local_")) {
+      fetchRestaurantDetails();
+    }
+  }, [restaurant?.placeId, fetchRestaurantDetails]);
 
   if (!restaurant) {
     return (
@@ -400,4 +398,3 @@ const RestaurantDetailPage = () => {
 };
 
 export default RestaurantDetailPage;
-

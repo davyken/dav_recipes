@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { COLORS } from "../constants/colors";
 import { MealAPI } from "../services/mealAPI";
@@ -115,7 +115,9 @@ const SearchPage = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState("");
 
-  const performSearch = async (query, country = selectedCountry) => {
+  const performSearch = useCallback(async (query, country) => {
+    const activeCountry = country !== undefined ? country : selectedCountry;
+
     // if no search query, get random meals
     if (!query.trim()) {
       const randomMeals = await MealAPI.getRandomMeals(12);
@@ -135,8 +137,8 @@ const SearchPage = () => {
     }
 
     // If African country filter is selected
-    if (selectedCountry) {
-      const countryResults = await MealAPI.searchByAfricanCountry(selectedCountry);
+    if (activeCountry) {
+      const countryResults = await MealAPI.searchByAfricanCountry(activeCountry);
       results = [...results, ...countryResults];
       // Deduplicate by ID
       const seen = new Set();
@@ -151,34 +153,18 @@ const SearchPage = () => {
       .slice(0, 12)
       .map((meal) => MealAPI.transformMealData(meal))
       .filter((meal) => meal !== null);
-  };
+  }, [selectedCountry]);
 
-  const loadInitialData = async () => {
+  const loadInitialData = useCallback(async () => {
     try {
       const results = await performSearch("");
       setRecipes(results);
     } catch (error) {
       console.error("Error loading initial data:", error);
     }
-  };
+  }, [performSearch]);
 
-  useEffect(() => {
-    loadInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (searchQuery.length > 2 || searchQuery.length === 0) {
-        searchRecipes(searchQuery);
-      }
-    }, 500);
-
-    return () => clearTimeout(debounceTimer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, selectedCountry]);
-
-  const searchRecipes = async (query) => {
+  const searchRecipes = useCallback(async (query) => {
     setLoading(true);
     setHasSearched(true);
     try {
@@ -190,7 +176,21 @@ const SearchPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [performSearch, selectedCountry]);
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (searchQuery.length > 2 || searchQuery.length === 0) {
+        searchRecipes(searchQuery);
+      }
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, selectedCountry, searchRecipes]);
 
   const handleCountryFilter = (countryCode) => {
     setSelectedCountry(countryCode);
