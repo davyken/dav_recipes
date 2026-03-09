@@ -1,6 +1,0 @@
-<parameter name="content">{
-  "buildCommand": "CI=true npm run build",
-  "installCommand": "npm install",
-  "outputDirectory": "web/build"
-}
-</parameter>

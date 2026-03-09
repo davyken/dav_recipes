@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { COLORS } from "../constants/colors";
 import { GooglePlacesAPI } from "../services/api";
@@ -218,12 +218,29 @@ const RestaurantsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    getCurrentLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const fetchNearbyRestaurants = useCallback(async (lat, lng) => {
+    setLoading(true);
+    try {
+      const results = await GooglePlacesAPI.getNearbyRestaurants(lat, lng, 10000, searchQuery || "restaurant");
+      
+      if (results && results.length > 0) {
+        const restaurantsWithDistance = results.map(r => ({
+          ...r,
+          distance: calculateDistance(lat, lng, r.latitude, r.longitude)
+        }));
+        setRestaurants(restaurantsWithDistance);
+      } else {
+        setRestaurants([]);
+      }
+    } catch (err) {
+      console.log("Error fetching restaurants:", err);
+      setRestaurants([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
 
-  const getCurrentLocation = () => {
+  const getCurrentLocation = useCallback(() => {
     if (navigator.geolocation) {
       setLoading(true);
       navigator.geolocation.getCurrentPosition(
@@ -242,29 +259,11 @@ const RestaurantsPage = () => {
       setError("Geolocation is not supported by your browser");
       setLoading(false);
     }
-  };
+  }, [fetchNearbyRestaurants]);
 
-  const fetchNearbyRestaurants = async (lat, lng) => {
-    setLoading(true);
-    try {
-      const results = await GooglePlacesAPI.getNearbyRestaurants(lat, lng, 10000, searchQuery || "restaurant");
-      
-      if (results && results.length > 0) {
-        const restaurantsWithDistance = results.map(r => ({
-          ...r,
-          distance: calculateDistance(lat, lng, r.latitude, r.longitude)
-        }));
-        setRestaurants(restaurantsWithDistance);
-      } else {
-        setRestaurants([]);
-      }
-    } catch (error) {
-      console.log("Error fetching restaurants:", error);
-      setRestaurants([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    getCurrentLocation();
+  }, [getCurrentLocation]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -430,4 +429,3 @@ const RestaurantsPage = () => {
 };
 
 export default RestaurantsPage;
-
