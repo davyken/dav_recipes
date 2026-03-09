@@ -1,5 +1,5 @@
 {
-  "buildCommand": "DISABLE_ESLINT_PLUGIN=true npm run build",
-  "installCommand": "npm install",
-  "outputDirectory": "web/build"
+  "buildCommand": "cd web && npm install && npm run build",
+  "outputDirectory": "web/build",
+  "installCommand": "cd web && npm install"
 }
